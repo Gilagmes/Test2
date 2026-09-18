@@ -1,0 +1,125 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                  String          @id @default(cuid())
+  telegramId          String          @unique
+  username            String          @default("")
+  firstName           String          @default("Player")
+  avatarUrl           String          @default("")
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  matches             Int             @default(0)
+  wins                Int             @default(0)
+  losses              Int             @default(0)
+  kills               Int             @default(0)
+  deaths              Int             @default(0)
+  gold                Int             @default(0)
+  bestTimeSec         Int?
+  rating              Int             @default(1000)
+  soft                Int             @default(200)
+
+  dailyLastClaimKey   String?
+  dailyStreak         Int             @default(0)
+  tutorialCompleted   Boolean         @default(false)
+  tutorialCompletedAt DateTime?
+
+  sessions            Session[]
+  matchesStarted      Match[]
+  results             MatchResult[]
+  ownedSkins          SkinOwnership[]
+  equippedSkins       SkinEquip[]
+
+  @@index([rating])
+}
+
+model Session {
+  token      String   @id
+  userId     String
+  telegramId String
+  createdAt  DateTime @default(now())
+  expiresAt  DateTime
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Match {
+  id          String       @id
+  userId      String
+  telegramId  String
+  heroId      String
+  seed        Int
+  status      String       @default("started")
+  startedAt   DateTime     @default(now())
+  finishedAt  DateTime?
+  createdAtMs BigInt
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  result      MatchResult?
+
+  @@index([userId])
+  @@index([status])
+  @@index([startedAt])
+}
+
+model MatchResult {
+  id          String   @id
+  userId      String
+  telegramId  String
+  username    String   @default("")
+  firstName   String   @default("Player")
+  matchId     String?  @unique
+  createdAt   DateTime @default(now())
+
+  victory     Boolean
+  winner      String
+  durationSec Int
+  heroName    String
+  heroId      String
+  kills       Int
+  deaths      Int
+  gold        Int
+  level       Int
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  match       Match?   @relation(fields: [matchId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([victory])
+}
+
+model SkinOwnership {
+  id          String   @id @default(cuid())
+  userId      String
+  skinId      String
+  purchasedAt DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, skinId])
+  @@index([skinId])
+}
+
+model SkinEquip {
+  id         String   @id @default(cuid())
+  userId     String
+  heroId     String
+  skinId     String
+  equippedAt DateTime @updatedAt
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, heroId])
+  @@index([skinId])
+}
