@@ -1,0 +1,100 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-shonen_rift}
+      POSTGRES_USER: ${POSTGRES_USER:-shonen}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-shonen} -d ${POSTGRES_DB:-shonen_rift}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  migrate:
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+    restart: "no"
+    env_file:
+      - .env.production
+    environment:
+      STORAGE_DRIVER: prisma
+      DEV_AUTH: "false"
+    command: ["npm", "run", "db:deploy"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      API_HOST: 0.0.0.0
+      API_PORT: 8787
+      STORAGE_DRIVER: prisma
+      DEV_AUTH: "false"
+    expose:
+      - "8787"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8787/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/client.Dockerfile
+    restart: unless-stopped
+    expose:
+      - "80"
+    depends_on:
+      api:
+        condition: service_healthy
+
+  bot:
+    build:
+      context: .
+      dockerfile: docker/bot.Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      API_URL: http://api:8787
+    depends_on:
+      api:
+        condition: service_healthy
+
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      web:
+        condition: service_started
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:

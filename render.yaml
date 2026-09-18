@@ -1,0 +1,33 @@
+services:
+  - type: web
+    name: shonen-rift-public-preview
+    env: node
+    plan: free
+    buildCommand: npm install --include=dev && npm run build:web
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: "production"
+      - key: API_HOST
+        value: "0.0.0.0"
+      - key: SERVE_CLIENT
+        value: "true"
+      - key: CLIENT_DIST_DIR
+        value: "dist"
+      - key: STORAGE_DRIVER
+        value: "json"
+      - key: DEV_AUTH
+        value: "true"
+      - key: CORS_ORIGIN
+        value: "true"
+      - key: MATCH_REPLAY_SECRET
+        generateValue: true
+      - key: MATCH_AUTHORITATIVE_REPLAY_ENABLED
+        value: "true"
+      - key: MATCH_AUTHORITATIVE_REPLAY_STRICT
+        value: "false"
+      - key: MATCH_AUTHORITATIVE_REPLAY_SAVE
+        value: "false"
+      - key: MATCH_CLIENT_SIM_HASH_REQUIRED
+        value: "false"

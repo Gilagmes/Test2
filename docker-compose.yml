@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: shonen-rift-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: shonen_rift
+      POSTGRES_USER: shonen
+      POSTGRES_PASSWORD: shonen_dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shonen -d shonen_rift"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres_data:
