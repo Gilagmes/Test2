@@ -1,0 +1,16 @@
+# Edge reverse proxy with automatic HTTPS.
+# PUBLIC_DOMAIN must point to this server with an A/AAAA DNS record.
+
+{$PUBLIC_DOMAIN} {
+  encode zstd gzip
+
+  reverse_proxy web:80
+
+  header {
+    # Telegram Mini App works fine with these security headers.
+    Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+    X-Content-Type-Options "nosniff"
+    Referrer-Policy "strict-origin-when-cross-origin"
+    Permissions-Policy "camera=(), microphone=(), geolocation=()"
+  }
+}
